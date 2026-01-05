@@ -1,4 +1,7 @@
-use std::io::{self, Write};
+use std::{
+    io::{self, Write},
+    usize,
+};
 
 #[derive(Clone, Copy)]
 struct Cell {
@@ -259,6 +262,76 @@ where
         self.cell_idx += 1;
     }
 }
+pub struct Label<'a> {
+    text: &'a str,
+    width: Option<usize>,
+    align_inner: Align,
+    align_outer: Align,
+}
+impl<'a> From<&'a str> for Label<'a> {
+    fn from(value: &'a str) -> Self {
+        Self {
+            text: value,
+            width: None,
+            align_inner: Align::Left,
+            align_outer: Align::Left,
+        }
+    }
+}
+impl<'a> Label<'a> {
+    pub fn with_width(mut self, width: usize) -> Self {
+        self.width = if width > 0 { Some(width) } else { None };
+        self
+    }
+    pub fn align_inner(mut self, align_inner: Align) -> Self {
+        self.align_inner = align_inner;
+        self
+    }
+    pub fn align_outer(mut self, align_outer: Align) -> Self {
+        self.align_outer = align_outer;
+        self
+    }
+}
+impl<'a> UiElement for Label<'a> {
+    fn render<T: DrawTarget>(&self, ui: &mut Ui<T>) {
+        let text = self.text;
+        let width = self.width;
+        let align_inner = &self.align_inner;
+        let align_outer = &self.align_outer;
+
+        let len = text.len();
+        let w = width.unwrap_or(len);
+        let visible_len = len.min(w);
+
+        let slice = if len > w { &text[..w] } else { text };
+        // outer
+        let start_x = if let Some(avail_x) = ui.available_x {
+            match align_outer {
+                Align::Left => ui.cursor_x,
+                Align::Right => ui.cursor_x + avail_x.saturating_sub(w),
+            }
+        } else {
+            // no right border known, that we can align to
+            ui.cursor_x
+        };
+        // inner
+        let start_x = match align_inner {
+            Align::Left => start_x,
+            Align::Right => start_x + w.saturating_sub(visible_len),
+        };
+        if ui.draw {
+            for i in 0..w {
+                ui.buf.put_char(ui.cursor_x + i, ui.cursor_y, ' ');
+            }
+            ui.buf.write_str(start_x, ui.cursor_y, slice);
+        }
+        ui.used_x = ui.used_x.max(w);
+        ui.advance(w, 1);
+    }
+}
+pub trait UiElement {
+    fn render<T: DrawTarget>(&self, ui: &mut Ui<T>);
+}
 pub enum StretchHint {
     Full,
     Compact,
@@ -267,7 +340,6 @@ pub enum Align {
     Left,
     Right,
 }
-// TODO: Add available_w, available_h to support strech in child.
 pub struct Ui<'a, T: DrawTarget> {
     buf: &'a mut T,
     cursor_x: usize,
@@ -317,6 +389,9 @@ where
         self.used_y = 0;
         self.layout = LayoutKind::Vertical;
         self.spacing = 0;
+    }
+    pub fn add<E: UiElement>(&mut self, ui_element: E) {
+        E::render(&ui_element, self);
     }
     fn advance(&mut self, w: usize, h: usize) {
         self.max_x = self.max_x.max(self.cursor_x + w);
