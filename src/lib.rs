@@ -593,42 +593,6 @@ where
         }
         self.advance(used_w, used_h);
     }
-    pub fn label_align(
-        &mut self,
-        text: &str,
-        width: Option<usize>,
-        align_inner: Align,
-        align_outer: Align,
-    ) {
-        let len = text.len();
-        let w = width.unwrap_or(len);
-        let visible_len = len.min(w);
-
-        let slice = if len > w { &text[..w] } else { text };
-        // outer
-        let start_x = if let Some(avail_x) = self.available_x {
-            match align_outer {
-                Align::Left => self.cursor_x,
-                Align::Right => self.cursor_x + avail_x.saturating_sub(w),
-            }
-        } else {
-            // no right border known, that we can align to
-            self.cursor_x
-        };
-        // inner
-        let start_x = match align_inner {
-            Align::Left => start_x,
-            Align::Right => start_x + w.saturating_sub(visible_len),
-        };
-        if self.draw {
-            for i in 0..w {
-                self.buf.put_char(self.cursor_x + i, self.cursor_y, ' ');
-            }
-            self.buf.write_str(start_x, self.cursor_y, slice);
-        }
-        self.used_x = self.used_x.max(w);
-        self.advance(w, 1);
-    }
     pub fn label(&mut self, text: &str) {
         self.add(Label::from(text));
     }
@@ -884,18 +848,62 @@ mod test {
         });
         ui.horizontal(|ui| {
             ui.vertical(|ui| {
-                ui.label_align("left left no width", None, Align::Left, Align::Left);
-                ui.label_align("left left width", Some(20), Align::Left, Align::Left);
-                ui.label_align("right right no width", None, Align::Right, Align::Left);
-                ui.label_align("right right width", Some(20), Align::Right, Align::Left);
-                ui.label_align("r", None, Align::Right, Align::Left);
+                ui.add(
+                    Label::from("left left no width")
+                        .align_inner(Align::Left)
+                        .align_outer(Align::Left),
+                );
+                ui.add(
+                    Label::from("left left width")
+                        .with_width(20)
+                        .align_inner(Align::Left)
+                        .align_outer(Align::Left),
+                );
+                ui.add(
+                    Label::from("right right no width")
+                        .align_inner(Align::Right)
+                        .align_outer(Align::Left),
+                );
+                ui.add(
+                    Label::from("right right width")
+                        .with_width(20)
+                        .align_inner(Align::Right)
+                        .align_outer(Align::Left),
+                );
+                ui.add(
+                    Label::from("r")
+                        .align_inner(Align::Right)
+                        .align_outer(Align::Left),
+                );
             });
             ui.vertical(|ui| {
-                ui.label_align("left left no width", None, Align::Left, Align::Left);
-                ui.label_align("left left width", Some(20), Align::Left, Align::Left);
-                ui.label_align("right right no width", None, Align::Right, Align::Right);
-                ui.label_align("right right width", Some(80), Align::Right, Align::Right);
-                ui.label_align("r", None, Align::Right, Align::Right);
+                ui.add(
+                    Label::from("left left no width")
+                        .align_inner(Align::Left)
+                        .align_outer(Align::Left),
+                );
+                ui.add(
+                    Label::from("left left width")
+                        .with_width(20)
+                        .align_inner(Align::Left)
+                        .align_outer(Align::Left),
+                );
+                ui.add(
+                    Label::from("right right no width")
+                        .align_inner(Align::Right)
+                        .align_outer(Align::Right),
+                );
+                ui.add(
+                    Label::from("right right width")
+                        .with_width(80)
+                        .align_inner(Align::Right)
+                        .align_outer(Align::Right),
+                );
+                ui.add(
+                    Label::from("r")
+                        .align_inner(Align::Right)
+                        .align_outer(Align::Right),
+                );
             });
         });
     }
