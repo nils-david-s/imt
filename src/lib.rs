@@ -268,6 +268,16 @@ pub struct Label<'a> {
     align_inner: Align,
     align_outer: Align,
 }
+impl<'a> From<&'a String> for Label<'a> {
+    fn from(value: &'a String) -> Self {
+        Self {
+            text: value,
+            width: None,
+            align_inner: Align::Left,
+            align_outer: Align::Left,
+        }
+    }
+}
 impl<'a> From<&'a str> for Label<'a> {
     fn from(value: &'a str) -> Self {
         Self {
@@ -619,23 +629,8 @@ where
         self.used_x = self.used_x.max(w);
         self.advance(w, 1);
     }
-    pub fn label(&mut self, text: &str, width: Option<usize>, align: Align) {
-        let len = text.len();
-        let w = width.unwrap_or(len);
-        let visible_len = len.min(w);
-
-        let slice = if len > w { &text[..w] } else { text };
-        let start_x = match align {
-            Align::Left => self.cursor_x,
-            Align::Right => self.cursor_x + w - visible_len,
-        };
-        if self.draw {
-            for i in 0..w {
-                self.buf.put_char(self.cursor_x + i, self.cursor_y, ' ');
-            }
-            self.buf.write_str(start_x, self.cursor_y, slice);
-        }
-        self.advance(w, 1);
+    pub fn label(&mut self, text: &str) {
+        self.add(Label::from(text));
     }
     pub fn number_i64(&mut self, value: i64, width: usize) {
         if self.draw {
@@ -885,7 +880,7 @@ mod test {
         ui.available_x = Some(x_wide);
         ui.horizontal(|ui| {
             ui.space(x_wide - 1);
-            ui.label("|", None, Align::Left);
+            ui.label("|");
         });
         ui.horizontal(|ui| {
             ui.vertical(|ui| {
