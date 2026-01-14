@@ -1,7 +1,4 @@
-use std::{
-    io::{self, Write},
-    usize,
-};
+use std::io::{self, Write};
 
 #[derive(Clone, Copy)]
 struct Cell {
@@ -71,7 +68,6 @@ impl DrawTarget for ScreenBuffer {
             return;
         }
 
-        // needed if we want to support popups like overwriting the layer beneath
         for i in 0..width {
             self.put_char(x + i, y, ' ');
         }
@@ -189,6 +185,7 @@ impl DrawTarget for ScreenBuffer {
         self.draw_vline(x + w - 1, y + 1, h - 2, '|');
     }
 }
+#[derive(Copy, Clone)]
 pub enum BorderKind {
     Full,
     No,
@@ -208,8 +205,6 @@ where
     spacing: usize,
     spacing_inner: usize,
     cell_idx: usize,
-    cursor_x: usize,
-    cursor_y: usize,
     max_col_width: Vec<usize>,
     max_row_height: Vec<usize>,
     draw: bool,
@@ -243,7 +238,6 @@ where
             cursor_y: start_y,
             max_x: start_x,
             max_y: start_y,
-            // TODO: adjust to col width, row height
             available_x: Some(self.max_col_width[col]),
             available_y: Some(self.max_row_height[row]),
             used_x: 0,
@@ -497,8 +491,6 @@ where
             cols,
             spacing_inner: spacing,
             cell_idx: 0,
-            cursor_x: 0,
-            cursor_y: 0,
             max_col_width: vec![0; cols],
             max_row_height: vec![0],
             draw: false,
@@ -515,8 +507,6 @@ where
             cols,
             spacing_inner: spacing,
             cell_idx: 0,
-            cursor_x: 0,
-            cursor_y: 0,
             max_col_width: measured_max_col_width,
             max_row_height: measured_max_row_height,
             draw: true,
@@ -603,7 +593,6 @@ where
         }
         self.advance(width, 1);
     }
-    // TODO: BUG: continue to writes to the left
     pub fn number_f64(&mut self, value: f64, precision: usize, width: usize) {
         if self.draw {
             self.buf
